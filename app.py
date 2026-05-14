@@ -256,17 +256,46 @@ def _is_internal(text: str) -> bool:
     return any(phrase in t for phrase in _INTERNAL_PHRASES)
 
 
+def _clean_meta(text: str) -> str:
+    """
+    Cleans a meta_description string for display.
+
+    Handles YAML line-continuation backslash artifacts that appear when the
+    description was written across multiple lines in the draft frontmatter
+    (e.g. "framework \ it" or a trailing lone backslash).
+    """
+    if not text:
+        return ""
+    # Collapse backslash + any whitespace (YAML line-continuation artifact)
+    text = re.sub(r"\\\s+", " ", text)
+    # Strip a lone trailing backslash with no continuation
+    text = text.rstrip("\\").strip()
+    if len(text) < 20:
+        return ""
+    if len(text) > 200:
+        return text[:197] + "..."
+    return text
+
+
 def _short_description(article: dict) -> str:
     """
     Returns a reader-facing description for a search result.
 
-    Uses article_angle only — why_exist is editorial/planning metadata and is
-    never shown to readers. Returns empty string if the text is internal, too
-    short, or contains planning language.
+    Preference order:
+      1. meta_description — written specifically for readers; present for all
+         50 published articles as of the current index.
+      2. article_angle — more reader-facing than why_exist; filtered through
+         _is_internal() to strip any planning/editorial language.
+      3. Empty string — always better than internal metadata.
 
-    meta_description/custom_excerpt are not yet in the index. When added,
-    prefer them first (they are written for readers, not editors).
+    why_exist is never used here: it is editorial/planning metadata.
     """
+    # 1. meta_description (preferred — always reader-facing)
+    meta = _clean_meta(article.get("meta_description") or "")
+    if meta:
+        return meta
+
+    # 2. article_angle with suppression (fallback for any article lacking meta)
     text = (article.get("article_angle") or "").strip().lstrip(">").strip()
     if not text or len(text) < 20:
         return ""

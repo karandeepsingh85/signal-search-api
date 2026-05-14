@@ -137,8 +137,8 @@ def search(
 
 
 def _clean_title(title: str) -> str:
-    “””Strip surrounding quote marks that appear on some ad hoc article titles.”””
-    return title.strip().strip('”').strip('””')
+    """Strip surrounding quote marks that appear on some ad hoc article titles."""
+    return title.strip().strip('"').strip('""')
 
 
 # ---------------------------------------------------------------------------
@@ -148,54 +148,54 @@ def _clean_title(title: str) -> str:
 # Multi-word phrase corrections applied before word-level corrections.
 # Longer/more-specific patterns listed first.
 _PHRASE_CORRECTIONS = [
-    (“my wife an i”,      “my wife and i”),
-    (“my partner an i”,   “my partner and i”),
-    (“me an my wife”,     “me and my wife”),
-    (“me an my partner”,  “me and my partner”),
-    (“ an i keep”,        “ and i keep”),
-    (“ an i “,            “ and i “),
+    ("my wife an i",      "my wife and i"),
+    ("my partner an i",   "my partner and i"),
+    ("me an my wife",     "me and my wife"),
+    ("me an my partner",  "me and my partner"),
+    (" an i keep",        " and i keep"),
+    (" an i ",            " and i "),
 ]
 
 # Word-level typo corrections keyed by the bad spelling.
 _WORD_CORRECTIONS = {
-    “fiting”:       “fighting”,
-    “fightng”:      “fighting”,
-    “figthing”:     “fighting”,
-    “realtionship”: “relationship”,
-    “relationsip”:  “relationship”,
-    “relatonship”:  “relationship”,
-    “wokr”:         “work”,
-    “freinds”:      “friends”,
-    “lonley”:       “lonely”,
-    “numbb”:        “numb”,
-    “cant”:         “can't”,
-    “im”:           “i'm”,
-    “ive”:          “i've”,
+    "fiting":       "fighting",
+    "fightng":      "fighting",
+    "figthing":     "fighting",
+    "realtionship": "relationship",
+    "relationsip":  "relationship",
+    "relatonship":  "relationship",
+    "wokr":         "work",
+    "freinds":      "friends",
+    "lonley":       "lonely",
+    "numbb":        "numb",
+    "cant":         "can't",
+    "im":           "i'm",
+    "ive":          "i've",
 }
 
 # Pre-compile word-boundary patterns once at import time
 _WORD_RE = {
-    word: re.compile(r”\b” + re.escape(word) + r”\b”)
+    word: re.compile(r"\b" + re.escape(word) + r"\b")
     for word in _WORD_CORRECTIONS
 }
 
 
 def normalise_query(q: str) -> str:
-    “””
+    """
     Lightweight pre-embedding normalisation for reader queries.
 
     Fixes specific known typos and phrase variants that confuse the embedding
-    model (e.g. “fiting” matches “fitting” clothes rather than “fighting”).
+    model (e.g. "fiting" matches "fitting" clothes rather than "fighting").
     Not a full spellchecker — only corrects patterns we know cause bad results.
 
     The original query is returned in the API response; only the normalised
     form is passed to the embedding model.
-    “””
+    """
     # Normalise whitespace
-    q = re.sub(r”\s+”, “ “, q).strip()
+    q = re.sub(r"\s+", " ", q).strip()
     # Curly apostrophes → straight
-    q = q.replace(“‘”, “'”).replace(“’”, “'”)
-    q = q.replace(““”, '”').replace(“””, '”')
+    q = q.replace("'", "'").replace("'", "'")
+    q = q.replace(""", '"').replace(""", '"')
 
     norm = q.lower()
 
@@ -207,7 +207,7 @@ def normalise_query(q: str) -> str:
     for word, correction in _WORD_CORRECTIONS.items():
         norm = _WORD_RE[word].sub(correction, norm)
 
-    return re.sub(r”\s+”, “ “, norm).strip()
+    return re.sub(r"\s+", " ", norm).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -215,49 +215,49 @@ def normalise_query(q: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Phrases that indicate internal editorial/planning text — not for readers.
-# “research” alone is too broad (hits “Gottman research” etc.); use the specific
+# "research" alone is too broad (hits "Gottman research" etc.); use the specific
 # editorial state-name labels instead.
 _INTERNAL_PHRASES = [
-    “(score”,                   # score refs: “(score 35)”
-    “score “,                   # “Score 35–36”
-    “inventory”,                # “The inventory covers…”
-    “crisis research”,          # editorial research-state labels
-    “philosophical research”,
-    “optimisation research”,
-    “optimization research”,
-    “optimisation state”,       # “Optimisation state men want…”
-    “distinct practical need”,
-    “rubric”,
-    “highest-scoring”,
-    “low-confidence”,
-    “seo entry”,
-    “diagnostic seo”,
-    “state 2 q”,                # research question refs: “State 2 Q47”
-    “state 4 q”,
-    “state 5 q”,
-    “state q”,                  # catch any “State N Q…” variant
-    “this piece”,               # editorial: “This piece explores…”
-    “existing content”,
-    “existing pieces”,
-    “the platform”,             # “on the platform” — internal gap analysis
-    “no content on”,
-    “generation mode”,
-    “ghost admin”,
-    “claude”,
-    “practical companion to”,   # cross-ref: “Practical companion to 4.3-A”
-    “series closer”,            # editorial label for closing article
-    “covers male”,              # “inventory covers male anger…”
+    "(score",                   # score refs: "(score 35)"
+    "score ",                   # "Score 35–36"
+    "inventory",                # "The inventory covers…"
+    "crisis research",          # editorial research-state labels
+    "philosophical research",
+    "optimisation research",
+    "optimization research",
+    "optimisation state",       # "Optimisation state men want…"
+    "distinct practical need",
+    "rubric",
+    "highest-scoring",
+    "low-confidence",
+    "seo entry",
+    "diagnostic seo",
+    "state 2 q",                # research question refs: "State 2 Q47"
+    "state 4 q",
+    "state 5 q",
+    "state q",                  # catch any "State N Q…" variant
+    "this piece",               # editorial: "This piece explores…"
+    "existing content",
+    "existing pieces",
+    "the platform",             # "on the platform" — internal gap analysis
+    "no content on",
+    "generation mode",
+    "ghost admin",
+    "claude",
+    "practical companion to",   # cross-ref: "Practical companion to 4.3-A"
+    "series closer",            # editorial label for closing article
+    "covers male",              # "inventory covers male anger…"
 ]
 
 
 def _is_internal(text: str) -> bool:
-    “””Returns True if the first sentence contains internal planning/editorial language.”””
+    """Returns True if the first sentence contains internal planning/editorial language."""
     t = text.lower()
     return any(phrase in t for phrase in _INTERNAL_PHRASES)
 
 
 def _short_description(article: dict) -> str:
-    “””
+    """
     Returns a reader-facing description for a search result.
 
     Uses article_angle only — why_exist is editorial/planning metadata and is
@@ -266,17 +266,17 @@ def _short_description(article: dict) -> str:
 
     meta_description/custom_excerpt are not yet in the index. When added,
     prefer them first (they are written for readers, not editors).
-    “””
-    text = (article.get(“article_angle”) or “”).strip().lstrip(“>”).strip()
+    """
+    text = (article.get("article_angle") or "").strip().lstrip(">").strip()
     if not text or len(text) < 20:
-        return “”
+        return ""
     # Check only the first sentence — later sentences may be internal even
-    # when the opener is clean (e.g. “Most men know X. This piece gives you…”)
-    first_sentence = text.split(“.”)[0].strip()
+    # when the opener is clean (e.g. "Most men know X. This piece gives you…")
+    first_sentence = text.split(".")[0].strip()
     if len(first_sentence) < 15:
-        return “”
+        return ""
     if _is_internal(first_sentence):
-        return “”
+        return ""
     if len(first_sentence) > 160:
-        return first_sentence[:157] + “...”
-    return first_sentence + “.”
+        return first_sentence[:157] + "..."
+    return first_sentence + "."

@@ -1,0 +1,195 @@
+<!--
+  Signal for Men — Search Page
+
+  How to use:
+  1. In Ghost admin, create a new Page titled "Find Your Article" (or similar)
+  2. Add an HTML card (the </> block in the editor)
+  3. Paste this entire file into it
+  4. Replace YOUR_API_URL below with your deployed Render URL
+     e.g. https://signal-search-api.onrender.com
+  5. Save and publish the page
+-->
+
+<style>
+  .sfm-search-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    font-family: inherit;
+  }
+
+  .sfm-search-wrap p.sfm-intro {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .sfm-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+
+  .sfm-input {
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .sfm-input:focus {
+    border-color: #111;
+  }
+
+  .sfm-results {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sfm-result {
+    border-left: 3px solid #e0e0e0;
+    padding-left: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .sfm-result:hover {
+    border-color: #111;
+  }
+
+  .sfm-result a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sfm-result-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #111;
+    margin: 0 0 4px;
+    line-height: 1.35;
+  }
+
+  .sfm-result-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .sfm-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: #f0f0f0;
+    color: #555;
+  }
+
+  .sfm-badge-signal  { background: #e8f0fe; color: #1a56c4; }
+  .sfm-badge-tools   { background: #e6f4ea; color: #1e6e3d; }
+  .sfm-badge-reframe { background: #fce8e6; color: #b0341a; }
+
+  .sfm-result-desc {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .sfm-empty {
+    color: #888;
+    font-size: 0.95rem;
+  }
+</style>
+
+<div class="sfm-search-wrap">
+  <p class="sfm-intro">
+    Type what you're dealing with — in your own words.
+  </p>
+
+  <div class="sfm-input-row">
+    <input
+      id="sfm-q"
+      class="sfm-input"
+      type="text"
+      placeholder="e.g. I feel like I've let myself go"
+      autocomplete="off"
+      autofocus
+    />
+  </div>
+
+  <div id="sfm-results" class="sfm-results"></div>
+</div>
+
+<script>
+  // Replace this with your deployed Render URL
+  var API_URL = 'YOUR_API_URL';
+
+  var input   = document.getElementById('sfm-q');
+  var results = document.getElementById('sfm-results');
+  var timer   = null;
+
+  var BADGE_CLASS = {
+    'Signal':  'sfm-badge-signal',
+    'Tools':   'sfm-badge-tools',
+    'Reframe': 'sfm-badge-reframe',
+  };
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = input.value.trim();
+    if (q.length < 3) { results.innerHTML = ''; return; }
+    // Debounce — wait 400ms after typing stops before searching
+    timer = setTimeout(function () { doSearch(q); }, 400);
+  });
+
+  function doSearch(q) {
+    fetch(API_URL + '/search?q=' + encodeURIComponent(q) + '&top=8')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderResults(data.results); })
+      .catch(function () {
+        results.innerHTML = '<p class="sfm-empty">Search unavailable right now.</p>';
+      });
+  }
+
+  function renderResults(items) {
+    if (!items || items.length === 0) {
+      results.innerHTML = '<p class="sfm-empty">No results found. Try different words.</p>';
+      return;
+    }
+
+    results.innerHTML = items.map(function (item) {
+      var badgeClass = BADGE_CLASS[item.family] || '';
+      var desc = item.description
+        ? '<p class="sfm-result-desc">' + escHtml(item.description) + '</p>'
+        : '';
+      return (
+        '<div class="sfm-result">' +
+          '<a href="' + escHtml(item.url) + '">' +
+            '<div class="sfm-result-meta">' +
+              '<span class="sfm-badge ' + badgeClass + '">' + escHtml(item.family) + '</span>' +
+            '</div>' +
+            '<p class="sfm-result-title">' + escHtml(item.title) + '</p>' +
+            desc +
+          '</a>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>

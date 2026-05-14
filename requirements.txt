@@ -1,0 +1,7 @@
+fastapi==0.115.12
+uvicorn==0.34.2
+sentence-transformers==3.4.1
+numpy==1.26.4
+# torch is pulled in by sentence-transformers — CPU-only to keep deploy size down
+torch==2.6.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu

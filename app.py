@@ -127,24 +127,70 @@ def search(
 
 
 def _clean_title(title: str) -> str:
-    """Strip surrounding quote marks that appear on some ad hoc article titles."""
-    return title.strip().strip('"').strip('“”')
+    “””Strip surrounding quote marks that appear on some ad hoc article titles.”””
+    return title.strip().strip('”').strip('“”')
+
+
+# Phrases that indicate internal editorial/planning text — not for readers.
+# Note: “ research” alone is too broad (hits “Gottman research”); use the specific
+# editorial state names instead.
+_INTERNAL_PHRASES = [
+    “(score”,                   # research score refs: “(score 35)”
+    “score “,                   # “Score 35–36” at the start
+    “inventory”,                # “The inventory covers…” / “existing inventory”
+    “crisis research”,          # editorial research-state labels
+    “philosophical research”,
+    “optimisation research”,
+    “optimization research”,
+    “distinct practical need”,
+    “rubric”,
+    “highest-scoring”,
+    “low-confidence”,
+    “seo entry”,
+    “diagnostic seo”,
+    “state 2 q”,                # research question refs: “State 2 Q47”
+    “state 4 q”,
+    “state 5 q”,
+    “this piece”,               # editorial voice: “This piece explores…”
+    “existing content”,
+    “existing pieces”,
+    “the platform”,             # “on the platform” — internal gap analysis
+    “no content on”,
+    “generation mode”,
+    “ghost admin”,
+    “claude”,
+    “practical companion to”,   # cross-ref to another article ID
+    “series closer”,            # editorial label for the closing article
+]
+
+
+def _is_internal(text: str) -> bool:
+    “””Returns True if the first sentence contains internal planning/editorial language.”””
+    t = text.lower()
+    return any(phrase in t for phrase in _INTERNAL_PHRASES)
 
 
 def _short_description(article: dict) -> str:
-    """
-    Returns the best short description available for the article.
-    Prefers why_exist (editorial framing), falls back to article_angle.
-    Returns empty string if the text is too short or looks like a raw YAML marker.
-    """
-    text = article.get("why_exist") or article.get("article_angle") or ""
-    # Skip YAML block scalar markers and other short non-sentences
-    text = text.strip().lstrip(">").strip()
+    “””
+    Returns a reader-facing description for a search result.
+
+    Uses article_angle only — why_exist is editorial/planning metadata and is
+    never shown to readers. Returns empty string if the text is internal, too
+    short, or contains planning language.
+
+    meta_description/custom_excerpt are not yet in the index. When added,
+    prefer them first (they are written for readers, not editors).
+    “””
+    text = (article.get(“article_angle”) or “”).strip().lstrip(“>”).strip()
     if not text or len(text) < 20:
-        return ""
-    first_sentence = text.split(".")[0].strip()
+        return “”
+    # Check only the first sentence — later sentences may be internal even
+    # when the opener is clean (e.g. “Most men know X. This piece gives you…”)
+    first_sentence = text.split(“.”)[0].strip()
     if len(first_sentence) < 15:
-        return ""
+        return “”
+    if _is_internal(first_sentence):
+        return “”
     if len(first_sentence) > 160:
-        return first_sentence[:157] + "..."
-    return first_sentence + "."
+        return first_sentence[:157] + “...”
+    return first_sentence + “.”
